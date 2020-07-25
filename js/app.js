@@ -43,7 +43,7 @@ class PitchDetector {
 
   detectPitch() {
     this.analyser.getFloatTimeDomainData(this.buf);
-    return autoCorrelate(this.buf, this.audioContext.sampleRate);
+    return autoCorrelate(this.buf, this.audioContext.sampleRate, 0, 0.9);
   }
 }
 
@@ -107,10 +107,8 @@ function centsOffFromPitch(frequency, note) {
   );
 }
 
-let MIN_SAMPLES = 0; // will be initialized when AudioContext is created.
-let GOOD_ENOUGH_CORRELATION = 0.9; // this is the "bar" for how close a correlation needs to be
-
-function autoCorrelate(buf, sampleRate) {
+// good enough correlation: "bar" for how close a correlation needs to be
+function autoCorrelate(buf, sampleRate, minSamples, goodEnoughCorrelation) {
   let SIZE = buf.length,
     MAX_SAMPLES = Math.floor(SIZE / 2),
     bestOffset = -1,
@@ -129,7 +127,7 @@ function autoCorrelate(buf, sampleRate) {
     return -1;
 
   let lastCorrelation = 1;
-  for (let offset = MIN_SAMPLES; offset < MAX_SAMPLES; offset++) {
+  for (let offset = minSamples; offset < MAX_SAMPLES; offset++) {
     let correlation = 0;
 
     for (let i = 0; i < MAX_SAMPLES; i++) {
@@ -137,10 +135,7 @@ function autoCorrelate(buf, sampleRate) {
     }
     correlation = 1 - correlation / MAX_SAMPLES;
     correlations[offset] = correlation; // store it, for the tweaking we need to do below.
-    if (
-      correlation > GOOD_ENOUGH_CORRELATION &&
-      correlation > lastCorrelation
-    ) {
+    if (correlation > goodEnoughCorrelation && correlation > lastCorrelation) {
       foundGoodCorrelation = true;
       if (correlation > bestCorrelation) {
         bestCorrelation = correlation;
