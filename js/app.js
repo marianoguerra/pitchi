@@ -19,7 +19,7 @@ class PitchDetector {
     this.audioContext = null;
     this.mediaStreamSource = null;
     this.analyser = null;
-    this.bufLen = 1024;
+    this.bufLen = 2048;
     this.buf = new Float32Array(this.bufLen);
 
     this.listining = false;
@@ -48,46 +48,49 @@ class PitchDetector {
 }
 
 class NoteInfo {
-  constructor(noteIndex, noteName, accidental, detune) {
+  constructor(noteIndex, noteName, accidental, octave, detune) {
     this.noteIndex = noteIndex;
     this.noteName = noteName;
     this.accidental = accidental;
+    this.octave = octave;
     this.detune = detune;
   }
 }
 
-const ACC_NONE = '',
-  ACC_FLAT = 'flat',
-  ACC_SHARP = 'sharp';
+const ACC_NONE = 0,
+  ACC_FLAT = -1,
+  ACC_SHARP = 1;
 NoteInfo.fromPitch = function (pitch) {
   if (pitch === -1) {
-    return new NoteInfo(-1, '?', ACC_NONE, 0);
+    return new NoteInfo(0, '', ACC_NONE, 0, 0);
   }
 
   const noteIndex = noteFromPitch(pitch),
     noteName = NOTE_NAMES[noteIndex % 12],
+    octave = Math.floor(noteIndex / 12),
     detune = centsOffFromPitch(pitch, noteIndex),
     accidental = detune === 0 ? ACC_NONE : detune < 0 ? ACC_FLAT : ACC_SHARP;
 
-  return new NoteInfo(noteIndex, noteName, accidental, detune);
+  return new NoteInfo(noteIndex, noteName, accidental, octave, detune);
 };
 
 // https://github.com/cwilso/PitchDetect/blob/master/js/pitchdetect.js
 
 const NOTE_NAMES = [
-  'C',
-  'C#',
-  'D',
-  'D#',
-  'E',
-  'F',
-  'F#',
-  'G',
-  'G#',
-  'A',
-  'A#',
-  'B',
-];
+    'C',
+    'C♯',
+    'D',
+    'D♯',
+    'E',
+    'F',
+    'F♯',
+    'G',
+    'G♯',
+    'A',
+    'A♯',
+    'B',
+  ],
+  ACCIDENTAL_SYMBOLS = ['♭', '', '♯'];
 
 function noteFromPitch(frequency) {
   const noteNum = 12 * (Math.log(frequency / 440) / Math.log(2));
@@ -176,6 +179,7 @@ function main() {
   const pitchDetector = new PitchDetector(),
     startBtn = byId('startBtn'),
     noteNode = byId('note'),
+    octaveNode = byId('octave'),
     accidentalNode = byId('accidental'),
     detuneNode = byId('detune');
 
@@ -184,7 +188,8 @@ function main() {
       const pitch = pitchDetector.detectPitch(),
         noteInfo = NoteInfo.fromPitch(pitch);
       noteNode.innerText = noteInfo.noteName;
-      accidentalNode.innerText = noteInfo.accidental;
+      octaveNode.innerText = noteInfo.octave;
+      accidentalNode.innerText = ACCIDENTAL_SYMBOLS[noteInfo.accidental + 1];
       detuneNode.innerText = Math.abs(noteInfo.detune);
     }
 
